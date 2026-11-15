@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f2f7f5">
+    <title>Careflow — Book a clinic appointment</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Careflow home">
+        <span class="brand-mark" aria-hidden="true">✚</span>
+        <span>careflow</span>
+      </a>
+      <a class="portal-link" href="/clinic"><span class="portal-link-icon" aria-hidden="true">▦</span> Clinic portal</a>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">A CALMER WAY TO GET CARE</p>
+          <h1>Good care,<br><span>without the guesswork.</span></h1>
+          <p class="hero-description">Choose your doctor, pick a day, and reserve your place in the clinic queue. Your token and estimated time are shown before you book.</p>
+          <a class="hero-cta" href="#doctorsHeading">Find your doctor <span aria-hidden="true">↓</span></a>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="hero-orbit orbit-one"></div>
+          <div class="hero-orbit orbit-two"></div>
+          <div class="hero-card">
+            <span class="hero-card-icon">✓</span>
+            <div class="hero-card-copy">
+              <small>YOUR VISIT, MADE SIMPLE</small>
+              <strong>One less thing<br>to worry about.</strong>
+              <span>Clear token · Live updates</span>
+            </div>
+          </div>
+          <span class="hero-sparkle sparkle-one">✳</span><span class="hero-sparkle sparkle-two">+</span>
+        </div>
+      </section>
+
+      <section class="booking-steps" aria-label="How booking works">
+        <article class="booking-step"><span>01</span><div><strong>Choose a doctor</strong><small>Browse by specialty</small></div></article>
+        <article class="booking-step"><span>02</span><div><strong>See your estimate</strong><small>Token time before you book</small></div></article>
+        <article class="booking-step"><span>03</span><div><strong>Keep your link</strong><small>Check updates any time</small></div></article>
+      </section>
+
+      <section class="booking-section" aria-labelledby="doctorsHeading">
+        <div class="section-top">
+          <div>
+            <p class="eyebrow">START HERE</p>
+            <h2 id="doctorsHeading">Find the right doctor</h2>
+            <p class="section-description">Choose a date and specialty to explore doctors accepting appointments.</p>
+          </div>
+          <div class="filters">
+            <label class="filter-field"><span>Appointment date</span><input id="appointmentDate" type="date"></label>
+            <label class="filter-field"><span>Specialty</span><select id="specialtyFilter"><option value="">All specialties</option></select></label>
+          </div>
+        </div>
+        <div id="patientError" class="notice notice-error" role="alert" hidden></div>
+        <div id="doctorsGrid" class="doctor-grid" aria-live="polite"></div>
+        <div id="doctorsEmpty" class="empty-card" hidden>
+          <span class="empty-symbol">◷</span>
+          <strong>No doctors match this search</strong>
+          <span>Try a different specialty or appointment date.</span>
+        </div>
+      </section>
+
+      <section id="bookingPanel" class="booking-panel" aria-labelledby="bookingTitle" hidden>
+        <div class="booking-panel-heading">
+          <div>
+            <p class="eyebrow">YOUR VISIT</p>
+            <h2 id="bookingTitle">Reserve your place</h2>
+            <p id="bookingDoctor" class="section-description"></p>
+          </div>
+          <button type="button" id="closeBooking" class="text-button">Back to doctors</button>
+        </div>
+        <div id="tokenError" class="notice notice-error" role="alert" hidden></div>
+        <div class="slot-area">
+          <div class="slot-heading"><strong>Your estimated visit</strong><span id="slotDateLabel"></span></div>
+          <p id="tokenHoursLabel" class="muted-message"></p>
+          <div id="nextTokenEstimate" class="next-token-estimate" aria-live="polite" hidden></div>
+          <p id="noTokens" class="muted-message" hidden>No next token is currently available for this doctor on this date. Choose another date or doctor.</p>
+        </div>
+        <form id="appointmentForm" class="patient-form">
+          <div class="form-intro"><strong>Who is the appointment for?</strong><span>Your token is assigned automatically in booking order when you confirm.</span></div>
+          <div class="form-fields">
+            <label>Full name<input name="patientName" required maxlength="100" autocomplete="name" placeholder="Your name"></label>
+            <label>Contact phone
+              <input name="patientPhone" required maxlength="24" type="tel" autocomplete="tel" placeholder="Your phone number">
+              <span class="form-help">The clinic can use this number to contact you about your appointment.</span>
+            </label>
+          </div>
+          <div class="turnstile-block">
+            <div id="patientTurnstile" class="turnstile-widget" aria-label="Security check"></div>
+            <p id="patientTurnstileMessage" role="status">This quick check helps protect appointment booking from automated activity.</p>
+          </div>
+          <p id="appointmentError" class="form-error" role="alert" hidden></p>
+          <div class="form-submit-row">
+            <span class="privacy-note">Your private link lets you check or cancel this appointment later.</span>
+            <button id="bookButton" class="button button-primary" type="submit" disabled>Confirm appointment</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="bookingConfirmation" class="confirmation-card" aria-live="polite" hidden>
+        <div id="bookingStatusIcon" class="confirmation-icon" aria-hidden="true">✓</div>
+        <div class="confirmation-copy">
+          <p id="bookingConfirmationEyebrow" class="eyebrow">BOOKING STATUS</p>
+          <h2 id="bookingConfirmationTitle">You're on the schedule.</h2>
+          <p id="confirmationDetails"></p>
+          <p id="bookingConfirmationHelp" class="confirmation-help">Your expected time is approximate and may change if consultations run longer or shorter. Please arrive before your token estimate.</p>
+          <p><a id="bookingTrackLink" class="booking-track-link" href="/">Open or save your private booking link</a></p>
+          <div id="bookingTrackingError" class="notice notice-error" role="alert" hidden></div>
+          <div id="bookingNotifications" class="booking-notifications" aria-live="polite" hidden></div>
+          <div class="confirmation-actions">
+            <button id="cancelPatientBooking" class="button button-danger" type="button" hidden>Cancel appointment</button>
+            <button id="bookAnother" class="button button-secondary" type="button">Book another appointment</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Careflow · Patient booking</span>
+      <span>Token times are estimates based on clinic-configured average consultation durations.</span>
+    </footer>
+    <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+    <script src="/turnstile.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

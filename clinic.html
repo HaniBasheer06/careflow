@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f2f7f5">
+    <title>Careflow — Clinic staff portal</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/clinic" aria-label="Careflow clinic portal">
+        <span class="brand-mark" aria-hidden="true">✚</span>
+        <span>careflow</span>
+      </a>
+      <span class="secure-label"><span></span> Clinic team workspace</span>
+      <a class="portal-link" href="/">Patient booking</a>
+    </header>
+
+    <main>
+      <section id="clinicLogin" class="clinic-login">
+        <div class="login-icon" aria-hidden="true">✚</div>
+        <p class="eyebrow">WELCOME, CLINIC TEAM</p>
+        <h1>Sign in to your clinic</h1>
+        <p>Manage your doctors and daily appointments from one place.</p>
+        <div id="loginError" class="notice notice-error" role="alert" hidden></div>
+        <form id="staffLoginForm">
+          <label>Staff password
+            <input name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <div class="turnstile-block">
+            <div id="staffTurnstile" class="turnstile-widget" aria-label="Security check"></div>
+            <p>This quick check helps protect staff access from automated sign-in attempts.</p>
+          </div>
+          <button id="staffLoginButton" class="button button-primary" type="submit" disabled>Open clinic dashboard <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="login-footnote"><span aria-hidden="true">●</span> Authorized clinic staff only</p>
+      </section>
+
+      <div id="clinicDashboard" hidden>
+        <section class="clinic-heading">
+          <div>
+            <p class="eyebrow">YOUR DAILY WORKSPACE</p>
+            <h1>Clinic schedule</h1>
+            <p class="section-description">Your doctors, appointments, and patient queue—all in one place.</p>
+          </div>
+          <div class="clinic-heading-actions">
+            <span class="staff-pill"><span class="staff-pill-dot"></span><span id="clinicAccountEmail" class="clinic-account-email"></span></span>
+            <button id="logoutButton" class="button button-secondary" type="button">Sign out</button>
+          </div>
+        </section>
+        <div id="clinicError" class="notice notice-error" role="alert" hidden></div>
+        <div id="clinicSuccess" class="notice notice-success" role="status" hidden></div>
+
+        <section class="admin-section">
+          <div class="admin-section-heading">
+            <div><p class="section-kicker">CLINIC DIRECTORY</p><h2>Doctors</h2><p>Keep your care team and clinic hours up to date.</p></div>
+            <button id="addDoctorButton" class="button button-primary" type="button"><span aria-hidden="true">＋</span> Add doctor</button>
+          </div>
+          <div id="clinicDoctors" class="clinic-doctor-list"></div>
+        </section>
+
+        <section class="admin-section appointments-section">
+          <div class="admin-section-heading">
+            <div><p class="section-kicker">PATIENT QUEUE</p><h2>Appointments</h2><p>Review visits, manage tokens, or book for someone at reception.</p></div>
+            <div class="clinic-appointment-actions">
+              <label class="filter-field"><span>Schedule date</span><input id="clinicDate" type="date"></label>
+              <button id="bookPatientButton" class="button button-primary" type="button"><span aria-hidden="true">＋</span> Book for a patient</button>
+            </div>
+          </div>
+          <div id="appointmentsList" class="appointments-list" aria-live="polite"></div>
+          <div id="appointmentsEmpty" class="empty-card" hidden>
+            <span class="empty-symbol">✓</span>
+            <strong>No appointments for this date</strong>
+            <span>New patient bookings will show up here.</span>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <span>Careflow · Clinic staff portal</span>
+      <span>Shared schedule data is refreshed every 15 seconds.</span>
+    </footer>
+
+    <dialog id="doctorDialog" class="doctor-dialog">
+      <form id="doctorForm" novalidate>
+        <div class="dialog-heading">
+          <div><p class="eyebrow">CLINIC DIRECTORY</p><h2 id="doctorDialogTitle">Add a doctor</h2></div>
+          <button type="button" id="closeDoctorDialog" class="dialog-close" aria-label="Close">×</button>
+        </div>
+        <input type="hidden" name="id">
+        <label>Doctor name<input name="name" required maxlength="100" placeholder="Dr. Alex Taylor"></label>
+        <label>Specialty<input name="specialty" required maxlength="100" placeholder="Family Medicine"></label>
+        <fieldset class="days-field">
+          <legend>Working days</legend>
+          <div class="days-options">
+            <label><input type="checkbox" name="workingDays" value="0"> Sun</label>
+            <label><input type="checkbox" name="workingDays" value="1"> Mon</label>
+            <label><input type="checkbox" name="workingDays" value="2"> Tue</label>
+            <label><input type="checkbox" name="workingDays" value="3"> Wed</label>
+            <label><input type="checkbox" name="workingDays" value="4"> Thu</label>
+            <label><input type="checkbox" name="workingDays" value="5"> Fri</label>
+            <label><input type="checkbox" name="workingDays" value="6"> Sat</label>
+          </div>
+        </fieldset>
+        <div class="form-fields">
+          <label>Start time<input name="startTime" type="time" required value="09:00"></label>
+          <label>End time<input name="endTime" type="time" required value="17:00"></label>
+        </div>
+        <label>Average consultation estimate (minutes per patient)
+          <select name="avgMinutes">
+            <option value="5">5 minutes</option><option value="6">6 minutes</option>
+            <option value="7" selected>7 minutes</option><option value="8">8 minutes</option>
+            <option value="9">9 minutes</option><option value="10">10 minutes</option>
+            <option value="12">12 minutes</option><option value="15">15 minutes</option>
+            <option value="20">20 minutes</option><option value="30">30 minutes</option>
+            <option value="45">45 minutes</option><option value="60">60 minutes</option>
+          </select>
+        </label>
+        <p class="form-help">Starter values by specialty are estimates, not medical standards. Adjust them to your clinic's actual visit lengths.</p>
+        <label class="active-toggle"><input name="active" type="checkbox" checked> Listed for patient bookings</label>
+        <p id="doctorFormError" class="form-error" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button id="cancelDoctorEdit" class="button button-secondary" type="button">Cancel</button>
+          <button class="button button-primary" type="submit">Save doctor</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="appointmentDialog" class="doctor-dialog">
+      <form id="staffAppointmentForm">
+        <div class="dialog-heading">
+          <div><p class="eyebrow">RECEPTION BOOKING</p><h2>Book for a patient</h2></div>
+          <button type="button" id="closeAppointmentDialog" class="dialog-close" aria-label="Close">×</button>
+        </div>
+        <label>Doctor
+          <select name="doctorId" required></select>
+        </label>
+        <div class="form-fields">
+          <label>Patient name<input name="patientName" required maxlength="100" autocomplete="name"></label>
+          <label>Appointment date<input name="date" type="date" required></label>
+        </div>
+        <label>Patient mobile number
+          <input name="patientPhone" type="tel" required maxlength="24" autocomplete="tel" placeholder="7-15 digits">
+        </label>
+        <p class="form-help">Enter the patient's phone number so the clinic can contact them. Share the private tracking link after booking.</p>
+        <p id="staffAppointmentError" class="form-error" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button id="cancelStaffAppointment" class="button button-secondary" type="button">Cancel</button>
+          <button id="saveStaffAppointment" class="button button-primary" type="submit" disabled>Book appointment</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+    <script src="/turnstile.js"></script>
+    <script src="/clinic.js"></script>
+  </body>
+</html>
