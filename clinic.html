@@ -28,10 +28,6 @@
           <label>Staff password
             <input name="password" type="password" autocomplete="current-password" required>
           </label>
-          <div class="turnstile-block">
-            <div id="staffTurnstile" class="turnstile-widget" aria-label="Security check"></div>
-            <p>This quick check helps protect staff access from automated sign-in attempts.</p>
-          </div>
           <button id="staffLoginButton" class="button button-primary" type="submit" disabled>Open clinic dashboard <span aria-hidden="true">→</span></button>
         </form>
         <p class="login-footnote"><span aria-hidden="true">●</span> Authorized clinic staff only</p>
@@ -154,7 +150,6 @@
     </dialog>
 
     <div id="toastRegion" class="toast-region" aria-live="polite"></div>
-    <script src="/turnstile.js"></script>
     <script src="/clinic.js"></script>
   </body>
 </html>

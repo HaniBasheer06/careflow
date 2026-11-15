@@ -10,16 +10,13 @@ import time
 from collections import deque
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from urllib.error import URLError
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
 
 from dotenv import load_dotenv
 from flask import Flask, abort, current_app, g, jsonify, request, send_from_directory, session
 
 
 ROOT = Path(__file__).resolve().parent
-load_dotenv(ROOT / ".env", override=True)
+load_dotenv(ROOT / ".env")
 
 MIN_BOOKING_LEAD_MINUTES = 15
 NO_SHOW_GRACE_MINUTES = 10
@@ -147,8 +144,7 @@ def initialize_database(database_path):
           tracking_token_hash TEXT,
           status TEXT NOT NULL DEFAULT 'booked'
             CHECK (status IN ('booked', 'cancelled', 'completed', 'no_show')),
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          patient_email TEXT
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS appointment_notifications (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -160,23 +156,6 @@ def initialize_database(database_path):
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           acknowledged_at TEXT
         );
-        CREATE TABLE IF NOT EXISTS email_messages (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          appointment_id INTEGER NOT NULL REFERENCES appointments(id),
-          message_type TEXT NOT NULL,
-          recipient_email TEXT NOT NULL,
-          subject TEXT NOT NULL,
-          message_body TEXT NOT NULL,
-          scheduled_at TEXT NOT NULL,
-          status TEXT NOT NULL DEFAULT 'queued'
-            CHECK (status IN ('queued', 'sending', 'sent', 'failed', 'cancelled')),
-          attempts INTEGER NOT NULL DEFAULT 0,
-          last_error TEXT,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          sent_at TEXT
-        );
-        CREATE INDEX IF NOT EXISTS email_messages_due
-          ON email_messages(status, scheduled_at, id);
         """
     )
 
@@ -212,8 +191,6 @@ def initialize_database(database_path):
     appointment_columns = table_columns(connection, "appointments")
     if "tracking_token_hash" not in appointment_columns:
         connection.execute("ALTER TABLE appointments ADD COLUMN tracking_token_hash TEXT")
-    if "patient_email" not in appointment_columns:
-        connection.execute("ALTER TABLE appointments ADD COLUMN patient_email TEXT")
 
     if token_column_added:
         for appointment in connection.execute(
@@ -354,52 +331,6 @@ def require_staff():
         raise ApiError(401, "Sign in to the clinic portal to continue.")
 
 
-def turnstile_is_configured():
-    site_key = current_app.config["TURNSTILE_SITE_KEY"]
-    secret_key = current_app.config["TURNSTILE_SECRET_KEY"]
-    return bool(
-        site_key
-        and secret_key
-        and not site_key.startswith("replace-with-")
-        and not secret_key.startswith("replace-with-")
-    )
-
-
-def verify_turnstile(response_token, expected_action):
-    if not turnstile_is_configured():
-        raise ApiError(503, "Online security checks are not configured. Please contact the clinic.")
-    if not isinstance(response_token, str) or not response_token or len(response_token) > 2048:
-        raise ApiError(400, "Complete the security check and try again.")
-
-    fields = {
-        "secret": current_app.config["TURNSTILE_SECRET_KEY"],
-        "response": response_token,
-    }
-    if request.remote_addr:
-        fields["remoteip"] = request.remote_addr
-    verify_request = Request(
-        current_app.config["TURNSTILE_VERIFY_URL"],
-        data=urlencode(fields).encode("ascii"),
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        method="POST",
-    )
-    try:
-        with urlopen(verify_request, timeout=5) as response:
-            result = json.loads(response.read().decode("utf-8"))
-    except (URLError, TimeoutError, OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-        current_app.logger.warning(
-            "Turnstile verification unavailable (%s).", type(error).__name__
-        )
-        raise ApiError(503, "The security check could not be verified. Please try again.") from error
-
-    if (
-        not isinstance(result, dict)
-        or result.get("success") is not True
-        or result.get("action") != expected_action
-    ):
-        raise ApiError(400, "The security check expired or was not accepted. Please try again.")
-
-
 def enforce_rate_limit(scope, limit, window_seconds):
     now = time.monotonic()
     client_ip = request.remote_addr or "unknown"
@@ -538,8 +469,8 @@ def create_appointment(connection, booking):
             """
             INSERT INTO appointments
               (doctor_id, patient_name, patient_phone, appointment_date, start_time,
-               duration_minutes, token_number, tracking_token_hash, patient_email)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
+               duration_minutes, token_number, tracking_token_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 booking["doctorId"],
@@ -721,9 +652,6 @@ def create_app(test_config=None):
         SECRET_KEY_CONFIGURED=secret_is_configured,
         CLINIC_STAFF_PASSWORD=staff_password,
         CLINIC_STAFF_PASSWORD_CONFIGURED=password_is_configured,
-        TURNSTILE_SITE_KEY=os.getenv("TURNSTILE_SITE_KEY", "").strip(),
-        TURNSTILE_SECRET_KEY=os.getenv("TURNSTILE_SECRET_KEY", "").strip(),
-        TURNSTILE_VERIFY_URL="https://challenges.cloudflare.com/turnstile/v0/siteverify",
         STAFF_LOGIN_RATE_LIMIT=10,
         PATIENT_BOOKING_RATE_LIMIT=20,
         CLINIC_BOOKING_RATE_LIMIT=30,
@@ -753,9 +681,7 @@ def create_app(test_config=None):
         if not request.path.startswith("/api/"):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; style-src 'self'; "
-                "script-src 'self' https://challenges.cloudflare.com; "
-                "frame-src https://challenges.cloudflare.com; "
-                "connect-src 'self' https://challenges.cloudflare.com; "
+                "script-src 'self'; connect-src 'self'; "
                 "img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'"
             )
         return response
@@ -792,7 +718,7 @@ def create_app(test_config=None):
 
     @app.get("/<path:filename>")
     def static_file(filename):
-        if filename not in {"styles.css", "app.js", "clinic.js", "turnstile.js"}:
+        if filename not in {"styles.css", "app.js", "clinic.js"}:
             abort(404)
         return send_from_directory(ROOT, filename)
 
@@ -803,26 +729,13 @@ def create_app(test_config=None):
     @app.get("/api/auth/me")
     def auth_me():
         is_staff = session.get("role") == "staff"
-        turnstile_configured = turnstile_is_configured()
         return jsonify(
             {
                 "user": {"name": "Clinic staff", "role": "staff"} if is_staff else None,
                 "staffLoginConfigured": bool(
                     app.config["CLINIC_STAFF_PASSWORD_CONFIGURED"]
                     and app.config["SECRET_KEY_CONFIGURED"]
-                    and turnstile_configured
                 ),
-                "turnstileConfigured": turnstile_configured,
-            }
-        )
-
-    @app.get("/api/security/config")
-    def security_config():
-        configured = turnstile_is_configured()
-        return jsonify(
-            {
-                "turnstileConfigured": configured,
-                "turnstileSiteKey": app.config["TURNSTILE_SITE_KEY"] if configured else "",
             }
         )
 
@@ -837,14 +750,12 @@ def create_app(test_config=None):
         if (
             not app.config["CLINIC_STAFF_PASSWORD_CONFIGURED"]
             or not app.config["SECRET_KEY_CONFIGURED"]
-            or not turnstile_is_configured()
         ):
             raise ApiError(
                 503,
-                "Clinic login needs staff credentials and Cloudflare Turnstile keys in the local .env file.",
+                "Clinic login needs a staff password and Flask secret in the environment.",
             )
         body = request_json()
-        verify_turnstile(body.get("turnstileToken"), "staff_login")
         supplied = body.get("password")
         if not isinstance(supplied, str) or not hmac.compare_digest(
             supplied.encode("utf-8"), configured_password.encode("utf-8")
@@ -906,7 +817,6 @@ def create_app(test_config=None):
             app.config["RATE_LIMIT_WINDOW_SECONDS"],
         )
         body = request_json()
-        verify_turnstile(body.get("turnstileToken"), "patient_booking")
         result = create_appointment(get_db(), validate_appointment(body))
         return jsonify(result), 201
 

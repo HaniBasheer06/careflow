@@ -7,9 +7,6 @@ let clinicAppointments = [];
 let clinicDoctorsSignature = '';
 let clinicAppointmentsSignature = '';
 let toastTimer;
-let staffTurnstileSiteKey = '';
-let staffTurnstileWidgetId = null;
-let staffTurnstileToken = '';
 
 const byId = (id) => document.getElementById(id);
 
@@ -53,54 +50,6 @@ async function api(url, options = {}) {
 function setNotice(element, message, visible = true) {
   element.textContent = message;
   element.hidden = !visible;
-}
-
-function updateStaffLoginButton() {
-  byId('staffLoginButton').disabled = !staffTurnstileToken;
-}
-
-function resetStaffTurnstile() {
-  staffTurnstileToken = '';
-  if (staffTurnstileWidgetId !== null) {
-    window.CareflowTurnstile.reset(staffTurnstileWidgetId);
-  }
-  updateStaffLoginButton();
-}
-
-async function setupStaffTurnstile() {
-  const config = await api('/api/security/config');
-  if (!config.turnstileConfigured || !config.turnstileSiteKey) {
-    setNotice(
-      byId('loginError'),
-      'Staff login protection is not configured. Add the Cloudflare Turnstile site and secret keys to .env, then restart.'
-    );
-    return;
-  }
-  staffTurnstileSiteKey = config.turnstileSiteKey;
-  try {
-    staffTurnstileWidgetId = await window.CareflowTurnstile.render(
-      byId('staffTurnstile'),
-      staffTurnstileSiteKey,
-      'staff_login',
-      {
-        onToken: (token) => {
-          staffTurnstileToken = token;
-          updateStaffLoginButton();
-        },
-        onExpired: () => {
-          staffTurnstileToken = '';
-          updateStaffLoginButton();
-        },
-        onError: () => {
-          staffTurnstileToken = '';
-          updateStaffLoginButton();
-          setNotice(byId('loginError'), 'The security check could not load. Check your connection and try again.');
-        }
-      }
-    );
-  } catch (error) {
-    setNotice(byId('loginError'), error.message);
-  }
 }
 
 function showClinicDashboard() {
@@ -355,8 +304,7 @@ byId('staffLoginForm').addEventListener('submit', async (event) => {
     await api('/api/staff/login', {
       method: 'POST',
       body: JSON.stringify({
-        password: form.elements.password.value,
-        turnstileToken: staffTurnstileToken
+        password: form.elements.password.value
       })
     });
     form.reset();
@@ -365,7 +313,7 @@ byId('staffLoginForm').addEventListener('submit', async (event) => {
   } catch (error) {
     setNotice(byId('loginError'), error.message);
   } finally {
-    resetStaffTurnstile();
+    button.disabled = false;
   }
 });
 
@@ -417,12 +365,15 @@ byId('appointmentsList').addEventListener('click', (event) => {
   if (button) updateAppointment(Number(button.dataset.appointmentId), button.dataset.appointmentStatus);
 });
 
-Promise.all([api('/api/auth/me'), setupStaffTurnstile()]).then(([result]) => {
+api('/api/auth/me').then((result) => {
   if (!result.staffLoginConfigured) {
     setNotice(
       byId('loginError'),
-      'Clinic sign-in needs a staff password, Flask secret, and Cloudflare Turnstile configuration in .env.'
+      'Clinic sign-in needs a staff password and Flask secret in the environment.'
     );
+    byId('staffLoginButton').disabled = true;
+  } else {
+    byId('staffLoginButton').disabled = false;
   }
   if (result.user && result.user.role === 'staff') {
     byId('clinicAccountEmail').textContent = result.user.name;

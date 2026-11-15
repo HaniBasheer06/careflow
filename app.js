@@ -9,9 +9,6 @@ let nextTokenEstimate = null;
 let patientDoctorsSignature = '';
 let displayedAvailabilitySignature = '';
 let activeTrackingToken = null;
-let patientTurnstileSiteKey = '';
-let patientTurnstileWidgetId = null;
-let patientTurnstileToken = '';
 
 const byId = (id) => document.getElementById(id);
 
@@ -117,53 +114,7 @@ function setNotice(element, message, visible = true) {
 }
 
 function updateBookingButton() {
-  byId('bookButton').disabled = !nextTokenEstimate || !patientTurnstileToken;
-}
-
-function resetPatientTurnstile() {
-  patientTurnstileToken = '';
-  if (patientTurnstileWidgetId !== null) {
-    window.CareflowTurnstile.reset(patientTurnstileWidgetId);
-  }
-  updateBookingButton();
-}
-
-async function ensurePatientTurnstile() {
-  if (!patientTurnstileSiteKey) {
-    const config = await api('/api/security/config');
-    if (!config.turnstileConfigured || !config.turnstileSiteKey) {
-      throw new Error('Online booking protection is not configured. Please contact the clinic.');
-    }
-    patientTurnstileSiteKey = config.turnstileSiteKey;
-  }
-  if (patientTurnstileWidgetId !== null) {
-    resetPatientTurnstile();
-    return;
-  }
-
-  patientTurnstileWidgetId = await window.CareflowTurnstile.render(
-    byId('patientTurnstile'),
-    patientTurnstileSiteKey,
-    'patient_booking',
-    {
-      onToken: (token) => {
-        patientTurnstileToken = token;
-        byId('patientTurnstileMessage').textContent = 'Security check complete.';
-        updateBookingButton();
-      },
-      onExpired: () => {
-        patientTurnstileToken = '';
-        byId('patientTurnstileMessage').textContent = 'Security check expired. Please complete it again.';
-        updateBookingButton();
-      },
-      onError: () => {
-        patientTurnstileToken = '';
-        updateBookingButton();
-        byId('patientTurnstileMessage').textContent =
-          'The security check could not load. Check your connection and try again.';
-      }
-    }
-  );
+  byId('bookButton').disabled = !nextTokenEstimate;
 }
 
 function renderSpecialties() {
@@ -232,7 +183,7 @@ function closeBookingPanel() {
   nextTokenEstimate = null;
   byId('bookingPanel').hidden = true;
   byId('appointmentForm').reset();
-  resetPatientTurnstile();
+  updateBookingButton();
 }
 
 async function openBookingPanel(doctorId) {
@@ -247,12 +198,7 @@ async function openBookingPanel(doctorId) {
   byId('appointmentForm').reset();
   setNotice(byId('tokenError'), '', false);
   byId('bookingPanel').scrollIntoView({ block: 'start' });
-  await Promise.all([
-    ensurePatientTurnstile().catch((error) => {
-      byId('patientTurnstileMessage').textContent = error.message;
-    }),
-    refreshQueue()
-  ]);
+  await refreshQueue();
 }
 
 async function refreshQueue() {
@@ -288,10 +234,6 @@ async function submitAppointment(event) {
   const form = event.currentTarget;
   const errorElement = byId('appointmentError');
   setNotice(errorElement, '', false);
-  if (!patientTurnstileToken) {
-    setNotice(errorElement, 'Complete the security check before confirming your appointment.');
-    return;
-  }
   if (!selectedDoctorId || !nextTokenEstimate) {
     setNotice(errorElement, 'No tokens are currently available for this date.');
     return;
@@ -307,8 +249,7 @@ async function submitAppointment(event) {
         doctorId: selectedDoctorId,
         date: byId('appointmentDate').value,
         patientName: formData.get('patientName'),
-        patientPhone: formData.get('patientPhone'),
-        turnstileToken: patientTurnstileToken
+        patientPhone: formData.get('patientPhone')
       })
     });
     const appointment = result.appointment;
@@ -330,7 +271,7 @@ async function submitAppointment(event) {
     await refreshQueue().catch((refreshError) => setNotice(byId('tokenError'), refreshError.message));
   } finally {
     submitButton.textContent = 'Confirm appointment';
-    resetPatientTurnstile();
+    updateBookingButton();
   }
 }
 
