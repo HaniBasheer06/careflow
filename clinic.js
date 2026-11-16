@@ -141,16 +141,22 @@ function renderAppointments() {
   byId('appointmentsList').innerHTML = clinicAppointments.map((appointment) => {
     const actions = appointment.status === 'booked'
       ? `<div class="row-actions">
-          ${canMarkCompleted(appointment) ? `<button class="small-button" data-appointment-status="completed" data-appointment-id="${appointment.id}">Complete</button>` : ''}
-          ${canMarkNoShow(appointment) ? `<button class="small-button" data-appointment-status="no_show" data-appointment-id="${appointment.id}">No-show</button>` : ''}
-          <button class="small-button danger" data-appointment-status="cancelled" data-appointment-id="${appointment.id}">Cancel</button>
+          ${appointment.inConsultation
+            ? `<button class="small-button" data-consultation-action="finish" data-appointment-id="${appointment.id}">Finish visit</button>`
+            : appointment.date === localDate() && canMarkCompleted(appointment)
+              ? `<button class="small-button" data-consultation-action="start" data-appointment-id="${appointment.id}">Start visit</button>`
+              : ''}
+          ${canMarkCompleted(appointment) && !appointment.inConsultation ? `<button class="small-button" data-appointment-status="completed" data-appointment-id="${appointment.id}">Complete</button>` : ''}
+            ${!appointment.inConsultation && canMarkNoShow(appointment) ? `<button class="small-button" data-appointment-status="no_show" data-appointment-id="${appointment.id}">No-show</button>` : ''}
+            ${!appointment.inConsultation ? `<button class="small-button danger" data-appointment-status="cancelled" data-appointment-id="${appointment.id}">Cancel</button>` : ''}
         </div>`
       : `<div class="appointment-status ${appointment.status}">${appointment.status.replace('_', ' ')}</div>`;
+    const appointmentStatus = appointment.inConsultation ? 'In consultation' : appointment.status.replace('_', ' ');
     return `<article class="appointment-row">
       <div class="appointment-time">${formatTime(appointment.time)}<div class="appointment-duration">Token #${appointment.tokenNumber}</div></div>
       <div class="appointment-patient">${escapeHtml(appointment.patientName)}<span class="appointment-phone">${escapeHtml(appointment.patientPhone)}</span></div>
       <div class="appointment-doctor">${escapeHtml(appointment.doctorName)}<div class="appointment-duration">${escapeHtml(appointment.specialty)}</div></div>
-      <div class="appointment-status ${appointment.status}">${appointment.status.replace('_', ' ')}</div>
+      <div class="appointment-status ${appointment.inConsultation ? 'in-consultation' : appointment.status}">${appointmentStatus}</div>
       ${actions}
     </article>`;
   }).join('');
@@ -225,6 +231,21 @@ async function updateAppointment(id, status) {
       ? `Appointment cancelled. ${result.renumberedCount} later booking${result.renumberedCount === 1 ? '' : 's'} moved forward; patients can see updates from their private booking links.`
       : `Appointment marked ${status.replace('_', ' ')}.`;
     setNotice(byId('clinicSuccess'), message);
+    await refreshClinic();
+  } catch (error) {
+    setNotice(byId('clinicError'), error.message);
+  }
+}
+
+async function updateConsultation(id, action) {
+  try {
+    await api(`/api/appointments/${id}/consultation`, {
+      method: 'POST',
+      body: JSON.stringify({ action })
+    });
+    setNotice(byId('clinicSuccess'), action === 'start'
+      ? 'Consultation started. The waiting room board is updated.'
+      : 'Visit completed. The waiting room board is updated.');
     await refreshClinic();
   } catch (error) {
     setNotice(byId('clinicError'), error.message);
@@ -362,7 +383,11 @@ byId('clinicDoctors').addEventListener('click', async (event) => {
 
 byId('appointmentsList').addEventListener('click', (event) => {
   const button = event.target.closest('button[data-appointment-status]');
+  const consultationButton = event.target.closest('button[data-consultation-action]');
   if (button) updateAppointment(Number(button.dataset.appointmentId), button.dataset.appointmentStatus);
+  if (consultationButton) {
+    updateConsultation(Number(consultationButton.dataset.appointmentId), consultationButton.dataset.consultationAction);
+  }
 });
 
 api('/api/auth/me').then((result) => {

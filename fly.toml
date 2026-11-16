@@ -1,0 +1,22 @@
+app = "careflow-aqhzzw"
+primary_region = "ams"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  COOKIE_SECURE = "true"
+  DB_FILE = "/data/clinic.sqlite"
+  HOST = "0.0.0.0"
+  PORT = "3018"
+
+[http_service]
+  internal_port = 3018
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = "stop"
+  min_machines_running = 0
+
+[[mounts]]
+  source = "clinic_data"
+  destination = "/data"

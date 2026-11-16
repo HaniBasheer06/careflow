@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f2f7f5">
+    <title>Careflow — Waiting room</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Careflow home">
+        <span class="brand-mark" aria-hidden="true">✚</span>
+        <span>careflow</span>
+      </a>
+      <span class="secure-label"><span></span> Live token board</span>
+      <a class="portal-link" href="/clinic">Clinic portal</a>
+    </header>
+
+    <main>
+      <section class="waiting-room-heading">
+        <p class="eyebrow">CLINIC QUEUE</p>
+        <h1>Waiting room</h1>
+        <p class="section-description">Token numbers only. This board never displays patient names or contact details.</p>
+        <p id="waitingRoomDate" class="waiting-room-date"></p>
+      </section>
+      <div id="waitingRoomError" class="notice notice-error" role="alert" hidden></div>
+      <div id="waitingRoomDoctors" class="waiting-room-grid" aria-live="polite"></div>
+      <div id="waitingRoomEmpty" class="empty-card" hidden>
+        <span class="empty-symbol">◷</span>
+        <strong>No active tokens right now</strong>
+        <span>Today's queue will appear here as appointments are booked.</span>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <span>Careflow · Waiting room display</span>
+      <span id="waitingRoomUpdated">Updating automatically every 10 seconds.</span>
+    </footer>
+    <script src="/waiting-room.js"></script>
+  </body>
+</html>

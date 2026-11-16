@@ -39,6 +39,32 @@
         </div>
       </section>
 
+      <section class="ai-guide" aria-labelledby="aiGuideTitle">
+        <div class="ai-guide-heading">
+          <div>
+            <p class="eyebrow">AI DOCTOR FINDER</p>
+            <h2 id="aiGuideTitle">Chat about which doctor to book</h2>
+            <p class="section-description">The AI can suggest a clinic specialty and doctors with open tokens for the appointment date selected below (defaults to today).</p>
+          </div>
+          <button id="clearAiChat" class="small-button" type="button">Clear chat</button>
+        </div>
+        <p class="notice notice-warning">This is an AI guide, not a medical professional. It cannot diagnose, prescribe, or assess emergencies. For severe or sudden symptoms, seek urgent medical care or contact local emergency services.</p>
+        <p id="aiGuideAvailability" class="notice notice-success" role="status">Checking whether the clinic's AI assistant is configured…</p>
+        <div id="aiChatMessages" class="ai-chat-messages" aria-live="polite">
+          <p class="ai-chat-empty">Describe your main concern in general terms. Do not include names, phone numbers, addresses, or other identifying details.</p>
+        </div>
+        <form id="aiChatForm" class="ai-chat-form">
+          <label for="aiChatInput">Your message</label>
+          <textarea id="aiChatInput" rows="3" maxlength="1000" required placeholder="What kind of concern would you like help choosing a doctor for?"></textarea>
+          <label class="ai-consent">
+            <input id="aiChatConsent" type="checkbox" required>
+            <span>I agree to send my messages to OpenAI to get a specialty suggestion. The clinic does not save this chat; OpenAI may process or retain it under its API terms. I will not include identifying details.</span>
+          </label>
+          <div id="aiChatError" class="form-error" role="alert" hidden></div>
+          <button id="sendAiMessage" class="button button-primary" type="submit" disabled>Send to AI</button>
+        </form>
+      </section>
+
       <section class="booking-steps" aria-label="How booking works">
         <article class="booking-step"><span>01</span><div><strong>Choose a doctor</strong><small>Browse by specialty</small></div></article>
         <article class="booking-step"><span>02</span><div><strong>See your estimate</strong><small>Token time before you book</small></div></article>
